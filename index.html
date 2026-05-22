@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AFSO Score Calculator</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --primary: #1d4ed8;
+      --low: #0f766e;
+      --mid: #b45309;
+      --high: #b91c1c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 32px auto;
+      padding: 0 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      padding: 28px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      color: #111827;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 12px;
+      margin: 22px 0;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .result {
+      display: none;
+      border-radius: 16px;
+      padding: 22px;
+      margin-top: 18px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+    }
+
+    .risk {
+      font-size: 42px;
+      font-weight: 800;
+      margin: 6px 0;
+    }
+
+    .category {
+      font-size: 20px;
+      font-weight: 800;
+      margin-top: 8px;
+    }
+
+    .low { color: var(--low); }
+    .mid { color: var(--mid); }
+    .high { color: var(--high); }
+
+    .formula {
+      margin-top: 24px;
+      padding: 16px;
+      border-radius: 12px;
+      background: #f3f4f6;
+      font-family: "Courier New", monospace;
+      font-size: 14px;
+      overflow-x: auto;
+    }
+
+    .disclaimer {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+
+    .error {
+      display: none;
+      color: #b91c1c;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+      .risk { font-size: 34px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="card">
+      <h1>AFSO Score Calculator</h1>
+      <p class="subtitle">
+        Advanced Fibrosis Severity in Obesity score for estimating the probability of advanced liver fibrosis
+        in patients with obesity undergoing bariatric surgery.
+      </p>
+
+      <div class="grid">
+        <div>
+          <label for="elf">ELF score</label>
+          <input id="elf" type="number" step="0.01" placeholder="e.g., 9.5" />
+          <div class="hint">Enhanced Liver Fibrosis score</div>
+        </div>
+
+        <div>
+          <label for="platelets">Platelet count</label>
+          <input id="platelets" type="number" step="1" placeholder="e.g., 250" />
+          <div class="hint">Unit: ×10⁹/L</div>
+        </div>
+
+        <div>
+          <label for="lsm">LSM</label>
+          <input id="lsm" type="number" step="0.1" placeholder="e.g., 8.5" />
+          <div class="hint">Liver stiffness measurement, kPa</div>
+        </div>
+      </div>
+
+      <div class="button-row">
+        <button class="primary" onclick="calculateAFSO()">Calculate AFSO</button>
+        <button class="secondary" onclick="resetCalculator()">Reset</button>
+      </div>
+
+      <div id="error" class="error">
+        Please enter valid positive values for ELF score, platelet count, and LSM.
+      </div>
+
+      <div id="result" class="result" aria-live="polite">
+        <div>Estimated probability of advanced fibrosis:</div>
+        <div id="risk" class="risk"></div>
+        <div id="category" class="category"></div>
+        <p id="interpretation"></p>
+      </div>
+
+      <div class="formula">
+        P = −13.3529 + (1.0708 × ELF) − (0.0102 × Platelets) + (1.5746 × ln(LSM))<br />
+        AFSO = exp(P) / [1 + exp(P)]
+      </div>
+
+      <p class="disclaimer">
+        This calculator is based on an internally validated prediction model and is intended for research
+        and clinical decision-support purposes only. It should not replace clinical judgment, liver specialist
+        assessment, or externally validated local pathways. External validation is required before routine
+        clinical implementation.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    function sigmoid(x) {
+      if (x >= 0) {
+        const z = Math.exp(-x);
+        return 1 / (1 + z);
+      } else {
+        const z = Math.exp(x);
+        return z / (1 + z);
+      }
+    }
+
+    function calculateAFSO() {
+      const elf = parseFloat(document.getElementById("elf").value);
+      const platelets = parseFloat(document.getElementById("platelets").value);
+      const lsm = parseFloat(document.getElementById("lsm").value);
+
+      const error = document.getElementById("error");
+      const result = document.getElementById("result");
+      const riskEl = document.getElementById("risk");
+      const categoryEl = document.getElementById("category");
+      const interpretationEl = document.getElementById("interpretation");
+
+      if (!Number.isFinite(elf) || !Number.isFinite(platelets) || !Number.isFinite(lsm) ||
+          elf <= 0 || platelets <= 0 || lsm <= 0) {
+        error.style.display = "block";
+        result.style.display = "none";
+        return;
+      }
+
+      error.style.display = "none";
+
+      const p = -13.3529 + (1.0708 * elf) - (0.0102 * platelets) + (1.5746 * Math.log(lsm));
+      const afso = sigmoid(p);
+      const percent = afso * 100;
+
+      riskEl.textContent = percent.toFixed(1) + "%";
+
+      categoryEl.className = "category";
+      if (afso < 0.15) {
+        categoryEl.textContent = "Low-risk / rule-out zone";
+        categoryEl.classList.add("low");
+        interpretationEl.textContent =
+          "AFSO < 0.15: advanced fibrosis is unlikely. In the derivation cohort, this threshold prioritized high sensitivity and negative predictive value.";
+      } else if (afso < 0.31) {
+        categoryEl.textContent = "Indeterminate zone";
+        categoryEl.classList.add("mid");
+        interpretationEl.textContent =
+          "AFSO 0.15–0.30: result is indeterminate. Consider hepatology review, additional non-invasive testing, or biopsy based on clinical context.";
+      } else {
+        categoryEl.textContent = "High-risk / rule-in zone";
+        categoryEl.classList.add("high");
+        interpretationEl.textContent =
+          "AFSO ≥ 0.31: higher probability of advanced fibrosis. Consider hepatology evaluation and procedure-specific risk stratification.";
+      }
+
+      result.style.display = "block";
+    }
+
+    function resetCalculator() {
+      document.getElementById("elf").value = "";
+      document.getElementById("platelets").value = "";
+      document.getElementById("lsm").value = "";
+      document.getElementById("error").style.display = "none";
+      document.getElementById("result").style.display = "none";
+    }
+  </script>
+</body>
+</html>
